@@ -11,25 +11,45 @@ const client = new Client({
   ]
 });
 
+// ===== Command Collection =====
 client.commands = new Collection();
 
-// load commands
+// ===== Load Commands =====
 for (const folder of fs.readdirSync("./commands")) {
-  for (const file of fs.readdirSync(`./commands/${folder}`).filter(f => f.endsWith(".js"))) {
+  const files = fs
+    .readdirSync(`./commands/${folder}`)
+    .filter(file => file.endsWith(".js"));
+
+  for (const file of files) {
     const command = require(`./commands/${folder}/${file}`);
+    if (!command.name || !command.execute) continue;
     client.commands.set(command.name, command);
   }
 }
 
-// load events
+// ===== Load Events =====
 for (const file of fs.readdirSync("./events").filter(f => f.endsWith(".js"))) {
   const event = require(`./events/${file}`);
+  if (!event.name || !event.execute) continue;
   client.on(event.name, (...args) => event.execute(...args, client));
 }
 
-// express (กัน sleep)
+// ===== Express (Render Health Check) =====
 const app = express();
-app.get("/", (req, res) => res.send("Bot alive"));
-app.listen(3000);
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.status(200).send("Bot is running");
+});
+
+app.listen(PORT, () => {
+  console.log(`Web server running on port ${PORT}`);
+});
+
+// ===== Discord Login =====
+if (!process.env.TOKEN) {
+  console.error("❌ TOKEN is missing in environment variables");
+  process.exit(1);
+}
 
 client.login(process.env.TOKEN);
